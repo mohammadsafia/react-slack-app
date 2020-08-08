@@ -2,29 +2,23 @@ import React from "react";
 import firebase from "../../firebase";
 import { connect } from "react-redux";
 import { setCurrentChannel, setPrivateChannel } from "../../actions";
-import {
-  Menu,
-  Icon,
-  Modal,
-  Form,
-  Input,
-  Button,
-  Label,
-} from "semantic-ui-react";
+// prettier-ignore
+import { Menu, Icon, Modal, Form, Input, Button, Label } from "semantic-ui-react";
 
 class Channels extends React.Component {
   state = {
     activeChannel: "",
     user: this.props.currentUser,
+    channel: null,
     channels: [],
     channelName: "",
     channelDetails: "",
     channelsRef: firebase.database().ref("channels"),
+    messagesRef: firebase.database().ref("messages"),
+    typingRef: firebase.database().ref("typing"),
+    notifications: [],
     modal: false,
     firstLoad: true,
-    channel: null,
-    messagesRef: firebase.database().ref("messages"),
-    notifications: [],
   };
 
   componentDidMount() {
@@ -57,14 +51,15 @@ class Channels extends React.Component {
     });
   };
 
-  handleNotifications = (channelId, currentCuannelId, notifications, snap) => {
+  handleNotifications = (channelId, currentChannelId, notifications, snap) => {
     let lastTotal = 0;
+
     let index = notifications.findIndex(
       (notification) => notification.id === channelId
     );
 
     if (index !== -1) {
-      if (channelId !== currentCuannelId) {
+      if (channelId !== currentChannelId) {
         lastTotal = notifications[index].total;
 
         if (snap.numChildren() - lastTotal > 0) {
@@ -77,7 +72,7 @@ class Channels extends React.Component {
         id: channelId,
         total: snap.numChildren(),
         lastKnownTotal: snap.numChildren(),
-        conut: 0,
+        count: 0,
       });
     }
 
@@ -86,6 +81,9 @@ class Channels extends React.Component {
 
   removeListeners = () => {
     this.state.channelsRef.off();
+    this.state.channels.forEach((channel) => {
+      this.state.messagesRef.child(channel.id).off();
+    });
   };
 
   setFirstChannel = () => {
@@ -93,7 +91,7 @@ class Channels extends React.Component {
     if (this.state.firstLoad && this.state.channels.length > 0) {
       this.props.setCurrentChannel(firstChannel);
       this.setActiveChannel(firstChannel);
-      this.setState({channel: firstChannel})
+      this.setState({ channel: firstChannel });
     }
     this.setState({ firstLoad: false });
   };
@@ -110,6 +108,7 @@ class Channels extends React.Component {
       createdBy: {
         name: user.displayName,
         avatar: user.photoURL,
+        id: user.uid,
       },
     };
 
@@ -139,28 +138,28 @@ class Channels extends React.Component {
 
   changeChannel = (channel) => {
     this.setActiveChannel(channel);
-    this.clearNotification();
-    this.props.setPrivateChannel(false);
+    this.state.typingRef
+      .child(this.state.channel.id)
+      .child(this.state.user.uid)
+      .remove();
+    this.clearNotifications();
     this.props.setCurrentChannel(channel);
-
-    this.setState({ channel: channel });
+    this.props.setPrivateChannel(false);
+    this.setState({ channel });
   };
 
-  clearNotification = () => {
+  clearNotifications = () => {
     let index = this.state.notifications.findIndex(
       (notification) => notification.id === this.state.channel.id
     );
 
     if (index !== -1) {
-      let updateNotifications = [...this.state.notifications];
-
-      updateNotifications[index].total = this.state.notifications[
+      let updatedNotifications = [...this.state.notifications];
+      updatedNotifications[index].total = this.state.notifications[
         index
       ].lastKnownTotal;
-
-      updateNotifications[index].count = 0;
-
-      this.setState({ notifications: updateNotifications });
+      updatedNotifications[index].count = 0;
+      this.setState({ notifications: updatedNotifications });
     }
   };
 
@@ -170,6 +169,7 @@ class Channels extends React.Component {
 
   getNotificationCount = (channel) => {
     let count = 0;
+
     this.state.notifications.forEach((notification) => {
       if (notification.id === channel.id) {
         count = notification.count;

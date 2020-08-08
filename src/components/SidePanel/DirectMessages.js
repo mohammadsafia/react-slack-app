@@ -6,12 +6,13 @@ import { Menu, Icon } from "semantic-ui-react";
 
 class DirectMessages extends React.Component {
   state = {
+    activeChannel: "",
     user: this.props.currentUser,
     users: [],
     usersRef: firebase.database().ref("users"),
     connectedRef: firebase.database().ref(".info/connected"),
     presenceRef: firebase.database().ref("presence"),
-    activeChannel: "",
+    notifications: [],
   };
 
   componentDidMount() {
@@ -19,6 +20,16 @@ class DirectMessages extends React.Component {
       this.addListeners(this.state.user.uid);
     }
   }
+
+  componentWillUnmount() {
+    this.removeListeners();
+  }
+
+  removeListeners = () => {
+    this.state.usersRef.off();
+    this.state.presenceRef.off();
+    this.state.connectedRef.off();
+  };
 
   addListeners = (currentUserUid) => {
     let loadedUsers = [];
@@ -77,12 +88,7 @@ class DirectMessages extends React.Component {
     };
     this.props.setCurrentChannel(channelData);
     this.props.setPrivateChannel(true);
-
     this.setActiveChannel(user.uid);
-  };
-
-  setActiveChannel = (userId) => {
-    this.setState({ activeChannel: userId });
   };
 
   getChannelId = (userId) => {
@@ -90,6 +96,10 @@ class DirectMessages extends React.Component {
     return userId < currentUserId
       ? `${userId}/${currentUserId}`
       : `${currentUserId}/${userId}`;
+  };
+
+  setActiveChannel = (userId) => {
+    this.setState({ activeChannel: userId });
   };
 
   render() {
@@ -106,13 +116,13 @@ class DirectMessages extends React.Component {
         {users.map((user) => (
           <Menu.Item
             key={user.uid}
+            active={user.uid === activeChannel}
             onClick={() => this.changeChannel(user)}
             style={{ opacity: 0.7, fontStyle: "italic" }}
-            active={user.uid === activeChannel}
           >
             <Icon
               name="circle"
-              color={this.isUserOnline(user) ? "green" : "red"}
+              color={this.isUserOnline(user) ? "green" : ""}
             />
             @ {user.name}
           </Menu.Item>
