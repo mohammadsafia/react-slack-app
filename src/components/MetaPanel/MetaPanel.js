@@ -1,10 +1,6 @@
-import React,{Component} from "react";
+import React from "react";
 
-class MetaPanel extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {};
-  }
+class MetaPanel extends React.Component {
   render() {
     return <div>MetaPanel</div>;
   }

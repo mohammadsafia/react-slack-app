@@ -1,34 +1,34 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import App from "./components/App";
+import Login from "./components/Auth/Login";
+import Register from "./components/Auth/Register";
+import Spinner from "./Spinner";
 import registerServiceWorker from "./registerServiceWorker";
+import firebase from "./firebase";
+
+import "semantic-ui-css/semantic.min.css";
+
 import {
   BrowserRouter as Router,
   Switch,
   Route,
-  withRouter,
+  withRouter
 } from "react-router-dom";
-import Login from "./components/Auth/Login";
-import Register from "./components/Auth/Register";
 
-import { setUser, clearUser } from "./redux/actions";
-
-import firebase from "./firebase";
 import { createStore } from "redux";
 import { Provider, connect } from "react-redux";
 import { composeWithDevTools } from "redux-devtools-extension";
-
-import rootReducer from "./redux/reducers/index";
-
-import Spinner from "./components/shared/Spinner";
-import "semantic-ui-css/semantic.min.css";
+import rootReducer from "./reducers";
+import { setUser, clearUser } from "./actions";
 
 const store = createStore(rootReducer, composeWithDevTools());
 
 class Root extends React.Component {
   componentDidMount() {
-    firebase.auth().onAuthStateChanged((user) => {
+    firebase.auth().onAuthStateChanged(user => {
       if (user) {
+        // console.log(user);
         this.props.setUser(user);
         this.props.history.push("/");
       } else {
@@ -37,25 +37,29 @@ class Root extends React.Component {
       }
     });
   }
+
   render() {
     return this.props.isLoading ? (
-      <Spinner content="Preparing Chat..." />
+      <Spinner />
     ) : (
       <Switch>
-        <Route path="/" exact component={App} />
+        <Route exact path="/" component={App} />
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
       </Switch>
     );
   }
 }
-const mapStateToProps = (state) => ({
-  user: state.user,
-  isLoading: state.user.isLoading,
+
+const mapStateFromProps = state => ({
+  isLoading: state.user.isLoading
 });
 
 const RootWithAuth = withRouter(
-  connect(mapStateToProps, { setUser, clearUser })(Root)
+  connect(
+    mapStateFromProps,
+    { setUser, clearUser }
+  )(Root)
 );
 
 ReactDOM.render(

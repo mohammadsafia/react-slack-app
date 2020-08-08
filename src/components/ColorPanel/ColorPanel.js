@@ -1,7 +1,7 @@
-import React, { Component } from "react";
+import React from "react";
 import { Sidebar, Menu, Divider, Button } from "semantic-ui-react";
 
-class ColorPanel extends Component {
+class ColorPanel extends React.Component {
   render() {
     return (
       <Sidebar

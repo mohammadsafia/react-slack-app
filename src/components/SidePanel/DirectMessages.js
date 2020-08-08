@@ -1,44 +1,40 @@
-import React, { Component } from "react";
-
+import React from "react";
+import firebase from "../../firebase";
+import { connect } from "react-redux";
+import { setCurrentChannel, setPrivateChannel } from "../../actions";
 import { Menu, Icon } from "semantic-ui-react";
 
-import firebase from "../../firebase";
-
-import { setCurrentChannel, setPrivateChannel } from "../../redux/actions";
-
-import { connect } from "react-redux";
-class DirectMessages extends Component {
+class DirectMessages extends React.Component {
   state = {
-    users: [],
     user: this.props.currentUser,
+    users: [],
     usersRef: firebase.database().ref("users"),
     connectedRef: firebase.database().ref(".info/connected"),
     presenceRef: firebase.database().ref("presence"),
+    activeChannel: "",
   };
+
   componentDidMount() {
     if (this.state.user) {
       this.addListeners(this.state.user.uid);
     }
   }
 
-  addListeners = (currentUserId) => {
+  addListeners = (currentUserUid) => {
     let loadedUsers = [];
     this.state.usersRef.on("child_added", (snap) => {
-      if (currentUserId !== snap.key) {
+      if (currentUserUid !== snap.key) {
         let user = snap.val();
         user["uid"] = snap.key;
-
         user["status"] = "offline";
-
         loadedUsers.push(user);
-
         this.setState({ users: loadedUsers });
       }
     });
 
     this.state.connectedRef.on("value", (snap) => {
       if (snap.val() === true) {
-        const ref = this.state.presenceRef.child(currentUserId);
+        const ref = this.state.presenceRef.child(currentUserUid);
         ref.set(true);
         ref.onDisconnect().remove((err) => {
           if (err !== null) {
@@ -49,40 +45,44 @@ class DirectMessages extends Component {
     });
 
     this.state.presenceRef.on("child_added", (snap) => {
-      if (currentUserId !== snap.key) {
+      if (currentUserUid !== snap.key) {
         this.addStatusToUser(snap.key);
       }
     });
 
     this.state.presenceRef.on("child_removed", (snap) => {
-      if (currentUserId !== snap.key) {
+      if (currentUserUid !== snap.key) {
         this.addStatusToUser(snap.key, false);
       }
     });
   };
 
   addStatusToUser = (userId, connected = true) => {
-    const updateUsers = this.state.users.reduce((acc, user) => {
+    const updatedUsers = this.state.users.reduce((acc, user) => {
       if (user.uid === userId) {
         user["status"] = `${connected ? "online" : "offline"}`;
       }
       return acc.concat(user);
     }, []);
-
-    this.setState({ users: updateUsers });
+    this.setState({ users: updatedUsers });
   };
 
   isUserOnline = (user) => user.status === "online";
 
   changeChannel = (user) => {
     const channelId = this.getChannelId(user.uid);
-
     const channelData = {
       id: channelId,
       name: user.name,
     };
     this.props.setCurrentChannel(channelData);
     this.props.setPrivateChannel(true);
+
+    this.setActiveChannel(user.uid);
+  };
+
+  setActiveChannel = (userId) => {
+    this.setState({ activeChannel: userId });
   };
 
   getChannelId = (userId) => {
@@ -91,8 +91,10 @@ class DirectMessages extends Component {
       ? `${userId}/${currentUserId}`
       : `${currentUserId}/${userId}`;
   };
+
   render() {
-    const { users } = this.state;
+    const { users, activeChannel } = this.state;
+
     return (
       <Menu.Menu className="menu">
         <Menu.Item>
@@ -101,13 +103,12 @@ class DirectMessages extends Component {
           </span>{" "}
           ({users.length})
         </Menu.Item>
-        {/* Users to Send Direct Messages */}
-
         {users.map((user) => (
           <Menu.Item
             key={user.uid}
             onClick={() => this.changeChannel(user)}
             style={{ opacity: 0.7, fontStyle: "italic" }}
+            active={user.uid === activeChannel}
           >
             <Icon
               name="circle"
@@ -120,8 +121,7 @@ class DirectMessages extends Component {
     );
   }
 }
-const mapDispatchToProps = {
-  setCurrentChannel: setCurrentChannel,
-  setPrivateChannel: setPrivateChannel,
-};
-export default connect(null, mapDispatchToProps)(DirectMessages);
+
+export default connect(null, { setCurrentChannel, setPrivateChannel })(
+  DirectMessages
+);
