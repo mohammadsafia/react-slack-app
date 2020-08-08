@@ -2,6 +2,43 @@ html,
 body,
 .app {
   height: 100vh;
-  background-color: #eee;
+  background: #eee;
   padding: 1em;
+}
+
+/* SidePanel */
+
+.menu {
+  padding-bottom: 2em;
+}
+
+/* Messages.js */
+.messages {
+  height: 62vh;
+  overflow-y: scroll;
+}
+
+/* MessageForm.js */
+.message__form {
+  position: fixed !important;
+  bottom: 1em;
+  margin-left: 320px !important;
+  left: 0;
+  right: 1em;
+  z-index: 200;
+}
+
+/* Message.js */
+.message__self {
+  border-left: 2px solid orange;
+  padding-left: 8px;
+}
+
+.message__image {
+  padding: 1em;
+}
+
+/* ProgressBar.js */
+.progress__bar {
+  margin: 0.3em 0 0 0 !important;
 }
